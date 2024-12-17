@@ -1,88 +1,148 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-const guess = ref(0)
-const listOfGuesses = ref([]);
-const maxGuesses = ref(5)
-const buttonIsShowing = ref(true)
-const randomNumber = ref()
-const score = ref(5)
-const inputIsShowing = ref(false)
-const nom = ref('');
+const listOfTasks = ref([]);
+const newtask = ref('')
+const checked = ref(false)
+const showit = ref(false)
+const newname = ref('')
+const idCounter = ref(0);
 const router = useRouter();
 
+function getAllUsers(){
+  fetch(`http://localhost:3000/scoreboard`)
+  .then(response => response.json())
+  .then(data => {
+    listOfTasks.value = data;
+    idCounter.value = data.length;
+  });
+}
+
 onMounted(()=>{
-  randomNumber.value = Math.floor(Math.random() * 100)
+  getAllUsers()
 })
 
-function addGuess(){
-  listOfGuesses.value.push(guess.value) 
-  if(listOfGuesses.value.length >= maxGuesses.value){
-    buttonIsShowing.value = false
-  }
-}
 
-function treatAddition(){
-  addGuess();
-  if(guess.value != randomNumber.value){
-    score.value --;
-  }
-  else{
-    buttonIsShowing.value = false
-  }
-  guess.value = 0
-
-}
-
-function Rejouer() {
-  listOfGuesses.value = []
-  buttonIsShowing.value = true
-  randomNumber.value = Math.floor(Math.random() * 100)
-}
-
-function showInput(){
-  inputIsShowing.value = true
-}
-function soumettre(){
-  fetch( 
-  "http://localhost:3000/scoreboard", {
+function addTask(){
+  if(newtask.value.trim() !== ''){
+    idCounter.value++;
+    fetch(`http://localhost:3000/scoreboard`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify(
-      {
-      name: nom.value,
-      score: score.value
-      })
-  }).then(
+    body: JSON.stringify({
+      id: idCounter.value.toString(),
+      task: newtask.value,
+      checked:checked.value,
+      showit:showit.value
+    })
+}).then(getAllUsers)
 
-    Rejouer,
-    inputIsShowing.value = false,
-    router.push('/leaderboard')
 
-  )
+    newtask.value='';
+    checked.value = false;
+    showit.value = false;
+  }
 }
+
+function checkit(id){
+  const task = listOfTasks.value.find((task) => task.id === id);
+
+  fetch(`http://localhost:3000/scoreboard/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      id: task.id.toString(),
+      task: task.task,
+      checked: !task.checked,
+      showit: task.showit
+    })
+  }).then(getAllUsers)
+
+
+
+}
+
+function showmore(id){
+  const task = listOfTasks.value.find((task) => task.id === id);
+  if (task) {
+    if(task.showit == false){
+      task.showit = true;
+    }
+    else{task.showit = false}
+  }
+  console.log(listOfTasks.value)
+}
+
+function change(id){
+  const task = listOfTasks.value.find((task) => task.id === id);
+
+  fetch(`http://localhost:3000/scoreboard/${id}`, {
+   method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      id: task.id.toString(),
+      task: newname.value,
+      checked: task.checked,
+      showit: task.showit
+    })
+  }).then(getAllUsers)
+
+}
+
+function Delete(id){
+  fetch(`http://localhost:3000/scoreboard/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  }).then(getAllUsers)
+
+}
+
+function Teleport(myId){
+  console.log("sent ID" + myId)
+  router.push({ name: "leaderboard", query: { SentId: myId } });
+}
+console.log(listOfTasks)
 </script>
 
 <template>
-  {{ randomNumber }}
-
-<input v-model="guess"> <button v-if="buttonIsShowing" @click="treatAddition">Take a guess</button>
-<div v-for="guess in listOfGuesses">
- <div v-if="guess != randomNumber"> votre choix: {{ guess }} est plus <span v-if="guess<randomNumber"> petit</span>  <span v-else> grand</span></div>
-  <div v-else >Bravo vous avez trouvé le bon nombre, votre score est: {{ score }}</div>
-
-</div>
-<div v-if="!buttonIsShowing">
-  <button  @click="Rejouer"> Rejouer</button>
-  <button  @click="showInput"> inserer vos données </button>
-</div>
-
-<div v-if="inputIsShowing">
-  <input v-model="nom">
-  <button @click="soumettre">submit</button>
-</div>
-
-
+  <input type="text" v-model="newtask">
+  <button @click="addTask">add</button>
+  <label>
+    checked
+    <input type="checkbox" v-model="checked">
+  </label>
+  <br><br>
+  <ul>
+    <li v-for="(task) in listOfTasks" :key="task.id">
+      <div v-if="task.checked==true" style="text-decoration: line-through;">
+        {{ task.task }}
+      </div>
+      <div v-else>
+        {{task.task}} <button @click="checkit(task.id)">✔</button>
+      </div>
+      <button @click="showmore(task.id)">
+        {{ task.showit ? "Hide" : "Show More" }}
+      </button>
+      <div v-if="task.showit">
+        <div>
+          <button @click="Teleport(task.id)">show in other page</button>
+        </div>
+        <div>
+          <label>Modify : <input type="text" placeholder="new name" v-model="newname"></label>
+          <button @click="change(task.id)">change</button>
+        </div>
+        <div>
+          Delete task <button @click="Delete(task.id)">Delete</button>
+        </div>
+      </div>
+    </li>
+  </ul>
 </template>

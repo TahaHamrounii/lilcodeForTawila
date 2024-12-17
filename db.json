@@ -1,3 +1,15 @@
 {
-  "scoreboard": []
+  "scoreboard": [
+    {
+      "task": "gg",
+      "id": "1",
+      "checked": true
+    },
+    {
+      "id": "3071",
+      "task": "aaa",
+      "checked": true,
+      "showit": false
+    }
+  ]
 }

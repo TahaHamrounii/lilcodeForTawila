@@ -1,39 +1,28 @@
 <script setup>
 import { ref, onMounted } from 'vue';
-const players = ref([]);
+import { useRoute } from 'vue-router';
 
-function loadAllPlayers(){
-  fetch('http://localhost:3000/scoreboard')
+const route = useRoute();
+const chosenUSer = ref({});
+
+onMounted(()=> {
+  const sentId = route.query.SentId;
+  fetch(`http://localhost:3000/scoreboard/${sentId}`)
   .then(response => response.json())
-  .then(data => 
-    players.value = data
-  )
-  }
-
-
-function deletefromTable(id){
-  fetch(`http://localhost:3000/scoreboard/${id}`, {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  }).then(
-    loadAllPlayers
-  )
-}
-
-onMounted(()=>{
-  loadAllPlayers()
+  .then(data => {
+    chosenUSer.value = data;
+  });
 })
+
+
 </script>
 
 <template>
-
-<div v-for="player in players" :key="player.id">
-  <p>{{player.name}}: {{player.score}}</p>
-  <button @click="deletefromTable(player.id)">delete</button>
+<div>
+  <h1>Details</h1>
+  <p>{{chosenUSer.task}}</p>
+  <p>{{chosenUSer.checked}}</p>
+  <p>{{chosenUSer.showit}}</p>
 </div>
-
 </template>
-<scrip ></scrip>
 
